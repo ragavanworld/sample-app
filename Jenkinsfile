@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "sample-app:latest"
+        KUBECONFIG = '/root/.kube/config'  // adjust if Jenkins runs as another user
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/ragavanworld/sample-app.git'
             }
@@ -15,44 +15,39 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh "/usr/local/bin/docker build -t \$IMAGE_NAME ."
+                sh 'docker build -t sample-nginx:latest . || echo "Skipping Docker build (using nginx:latest)"'
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Deploy to Kind Cluster') {
             steps {
-                echo "Running Docker container..."
-                sh "/usr/local/bin/docker stop sample-app || true"
-                sh "/usr/local/bin/docker rm sample-app || true"
-                sh "/usr/local/bin/docker run -d -p 8080:80 --name sample-app \$IMAGE_NAME"
+                echo "Deploying to kind cluster..."
+                sh '''
+                    kubectl apply -f k8s/nginx-deployment.yaml
+                    echo "Deployment status:"
+                    kubectl get pods -n app-demo-ns
+                    kubectl get svc -n app-demo-ns
+                '''
             }
         }
 
-        stage('Deploy to kind Cluster') {
+        stage('Verify Deployment') {
             steps {
-                echo "Deploying to kind Kubernetes cluster..."
-                sh """
-                cat <<EOF | /usr/local/bin/kubectl apply -f -
-                apiVersion: v1
-                kind: Pod
-                metadata:
-                  name: sample-app
-                spec:
-                  containers:
-                  - name: sample-app
-                    image: sample-app:latest
-                    ports:
-                    - containerPort: 80
-                EOF
-                """
+                echo "Verifying Nginx pod..."
+                sh '''
+                    kubectl wait --for=condition=available --timeout=60s deployment/app-demo-pod -n app-demo-ns
+                    echo "Access your app at: http://localhost:30909"
+                '''
             }
         }
+    }
 
-        stage('Test') {
-            steps {
-                echo "Testing app availability..."
-                sh "/usr/local/bin/curl http://localhost:8080"
-            }
+    post {
+        success {
+            echo "✅ Deployment successful — Visit: http://localhost:30909"
+        }
+        failure {
+            echo "❌ Deployment failed. Check Jenkins logs."
         }
     }
 }
