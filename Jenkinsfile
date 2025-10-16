@@ -15,16 +15,16 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh "docker build -t \$IMAGE_NAME ."
+                sh "/usr/local/bin/docker build -t \$IMAGE_NAME ."
             }
         }
 
         stage('Run Docker Container') {
             steps {
                 echo "Running Docker container..."
-                sh "docker stop sample-app || true"
-                sh "docker rm sample-app || true"
-                sh "docker run -d -p 8080:80 --name sample-app \$IMAGE_NAME"
+                sh "/usr/local/bin/docker stop sample-app || true"
+                sh "/usr/local/bin/docker rm sample-app || true"
+                sh "/usr/local/bin/docker run -d -p 8080:80 --name sample-app \$IMAGE_NAME"
             }
         }
 
@@ -32,7 +32,7 @@ pipeline {
             steps {
                 echo "Deploying to kind Kubernetes cluster..."
                 sh """
-                cat <<EOF | kubectl apply -f -
+                cat <<EOF | /usr/local/bin/kubectl apply -f -
                 apiVersion: v1
                 kind: Pod
                 metadata:
@@ -51,7 +51,7 @@ pipeline {
         stage('Test') {
             steps {
                 echo "Testing app availability..."
-                sh "curl http://localhost:8080"
+                sh "/usr/local/bin/curl http://localhost:8080"
             }
         }
     }
