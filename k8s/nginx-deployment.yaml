@@ -1,38 +1,21 @@
-pipeline {
-    agent any
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-demo
+  namespace: app-demo-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-demo
+    spec:
+      containers:
+      - name: nginx
+        image: localhost:5000/nginx-demo:v1
+        ports:
+        - containerPort: 80
 
-    environment {
-        IMAGE_NAME = "nginx-demo"
-        IMAGE_TAG = "v1"
-        K8S_NAMESPACE = "app-demo-ns"
-    }
-
-    stages {
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
-            }
-        }
-
-        stage('Push Image to Local Registry') {
-            steps {
-                sh 'docker tag $IMAGE_NAME:$IMAGE_TAG localhost:5000/$IMAGE_NAME:$IMAGE_TAG || true'
-                sh 'docker push localhost:5000/$IMAGE_NAME:$IMAGE_TAG || true'
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f k8s/nginx-deployment.yaml'
-                sh 'kubectl apply -f k8s/service.yaml'
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                sh 'kubectl get pods -n $K8S_NAMESPACE'
-                sh 'kubectl get svc -n $K8S_NAMESPACE'
-            }
-        }
-    }
-}
