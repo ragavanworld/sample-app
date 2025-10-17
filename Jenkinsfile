@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'ragavanworld/nginx-demo:v1' // Your Docker Hub repo
-        K8S_DIR = 'k8s'                           // Path where your YAMLs are
+        IMAGE_NAME = "nginx-demo:v1"
     }
 
     stages {
@@ -20,26 +19,25 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Load Image into Kind') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_CREDENTIALS', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh "docker push ${IMAGE_NAME}"
-                }
+                echo "Loading image into kind cluster..."
+                sh "kind load docker-image ${IMAGE_NAME} --name kind1"
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                echo "Applying Kubernetes manifests..."
-                sh "kubectl apply -f ${K8S_DIR}/"
-                sh "kubectl set image deployment/nginx-demo nginx=${IMAGE_NAME} -n app-demo-ns"
+                echo "Deploying app to Kubernetes..."
+                sh "kubectl apply -f k8s/nginx-configmap.yaml"
+                sh "kubectl apply -f k8s/nginx-deployment.yaml"
+                sh "kubectl apply -f k8s/service.yaml"
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo "Checking pod status..."
+                echo "Verifying deployment..."
                 sh "kubectl get pods -n app-demo-ns"
             }
         }
