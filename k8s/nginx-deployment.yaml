@@ -14,8 +14,16 @@ spec:
         app: nginx-demo
     spec:
       containers:
-      - name: nginx
-        image: localhost:5000/nginx-demo:v1
-        ports:
-        - containerPort: 80
+        - name: nginx-demo
+          image: nginx-demo:v1       # Your Docker image
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-html
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+      volumes:
+        - name: nginx-html
+          configMap:
+            name: nginx-html          # Must match your ConfigMap name
 

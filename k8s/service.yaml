@@ -4,11 +4,12 @@ metadata:
   name: app-demo-service
   namespace: app-demo-ns
 spec:
+  type: NodePort            # exposes service outside the cluster
   selector:
-    app: nginx-demo       # must match your Deployment label
+    app: nginx-demo         # must match Deployment labels
   ports:
     - protocol: TCP
-      port: 80             # service port inside cluster
-      targetPort: 80       # container port (nginx listens on 80)
-      nodePort: 30081      # host port for external access
-  type: NodePort           # exposes it outside the cluster
+      port: 80              # service port inside cluster
+      targetPort: 80        # container port (nginx listens on 80)
+      nodePort: 9090        # permanent host port
+
