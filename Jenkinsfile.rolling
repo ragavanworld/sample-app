@@ -1,32 +1,29 @@
 pipeline {
     agent any
 
-    environment {
-        K8S_NAMESPACE = "app-demo-ns"
-        DEPLOYMENT_NAME = "nginx-demo"
-        SERVICE_NAME = "app-demo-service"
-        NODE_PORT = "9090"
-    }
-
     stages {
-        stage('Rolling Update Deployment') {
+        stage('Rolling Update') {
             steps {
                 script {
-                    echo "Performing rolling update..."
-                    sh "kubectl rollout restart deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}"
+                    echo "🚀 Performing rolling restart of nginx-demo deployment..."
+                    sh 'kubectl rollout restart deployment/nginx-demo -n app-demo-ns'
+                    sh 'kubectl rollout status deployment/nginx-demo -n app-demo-ns --timeout=120s'
                 }
             }
         }
 
-        stage('Port-Forward Service') {
+        stage('Expose Service Port') {
             steps {
                 script {
-                    echo "Starting port-forward in background..."
-                    sh """
-                        nohup kubectl port-forward svc/${SERVICE_NAME} ${NODE_PORT}:80 -n ${K8S_NAMESPACE} > /tmp/port-forward.log 2>&1 &
-                        echo "Port-forward started on localhost:${NODE_PORT}"
-                    """
+                    echo "🌐 Starting port-forward for service app-demo-service on port 9090..."
+                    // Kill any previous port-forward if already running
+                    sh 'pkill -f "kubectl port-forward svc/app-demo-service" || true'
+
+                    // Start port-forward in background and log output
+                    sh 'nohup kubectl port-forward svc/app-demo-service 9090:80 -n app-demo-ns > /tmp/port-forward.log 2>&1 &'
+
+                    // Verify if it's running
+                    sh 'sleep 5 && ps -ef | grep "kubectl port-forward" || true'
                 }
             }
         }
@@ -34,10 +31,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Rolling update completed and service port-forward is running!"
+            echo "✅ Rolling update completed successfully. Service exposed at http://localhost:9090"
         }
         failure {
-            echo "❌ Rolling update failed. Check Jenkins logs."
+            echo "❌ Rolling update failed. Please check Jenkins logs or /tmp/port-forward.log"
         }
     }
 }
