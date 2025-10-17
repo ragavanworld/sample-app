@@ -1,0 +1,32 @@
+pipeline {
+    agent any
+
+    environment {
+        KUBE_CONTEXT = 'kind-kind1'
+        NAMESPACE    = 'app-demo-ns'
+        DEPLOYMENT   = 'nginx-demo'
+    }
+
+    stages {
+        stage('Rolling Update Deployment') {
+            steps {
+                echo "Performing rolling update for deployment: ${DEPLOYMENT}"
+                script {
+                    sh "kubectl config use-context ${KUBE_CONTEXT}"
+                    sh "kubectl apply -f k8s/nginx-configmap.yaml -n ${NAMESPACE}"
+                    sh "kubectl rollout restart deployment/${DEPLOYMENT} -n ${NAMESPACE}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Rolling update completed successfully!"
+        }
+        failure {
+            echo "❌ Rolling update failed. Check logs."
+        }
+    }
+}
+
